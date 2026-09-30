@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tetris Worlds</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Press+Start+2P&display=swap">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="bg"></canvas>
+
+<main id="stage">
+  <aside class="panel left">
+    <div class="box hold-box">
+      <div class="label">HOLD</div>
+      <canvas id="hold"></canvas>
+    </div>
+    <div class="stats">
+      <div class="stat big"><span class="label">SCORE</span><span id="score" class="value">0</span></div>
+      <div class="stat"><span class="label">LEVEL</span><span id="level" class="value">1</span>
+        <div class="bar"><div id="level-bar"></div></div></div>
+      <div class="stat"><span class="label" id="lines-label">LINES</span><span id="lines" class="value">0</span></div>
+      <div class="stat"><span class="label" id="time-label">TIME</span><span id="time" class="value mono">0:00.00</span></div>
+      <div class="stat small"><span class="label">PIECES/SEC</span><span id="pps" class="value mono">0.00</span></div>
+    </div>
+  </aside>
+
+  <div id="well-wrap">
+    <div id="well"></div>
+    <canvas id="board"></canvas>
+    <div id="popups"></div>
+    <div id="countdown"></div>
+  </div>
+
+  <aside class="panel right">
+    <div class="box next-box">
+      <div class="label">NEXT</div>
+      <canvas id="next"></canvas>
+    </div>
+    <div class="world-info">
+      <div class="label">WORLD</div>
+      <div id="world-name" class="value">Terra</div>
+      <div id="mode-name" class="sub">Marathon</div>
+      <div class="label pb-label">REKORD</div>
+      <div id="pb" class="value small">–</div>
+    </div>
+    <div class="hint">
+      <div><kbd>← →</kbd> Bewegen</div>
+      <div><kbd>↑</kbd>/<kbd>X</kbd> Drehen · <kbd>Z</kbd> Links</div>
+      <div><kbd>Space</kbd> Hard Drop</div>
+      <div><kbd>C</kbd>/<kbd>Shift</kbd> Hold</div>
+      <div><kbd>Esc</kbd> Pause · <kbd>R</kbd> Neustart</div>
+    </div>
+    <div class="credit">made by <b>Omid</b></div>
+  </aside>
+</main>
+
+<canvas id="fx"></canvas>
+<div id="toasts"></div>
+
+<div id="overlay" class="visible">
+  <!-- Title -->
+  <section class="screen" id="screen-title">
+    <h1 class="logo" aria-label="Tetris">
+      <span style="--c:#ff3b4f">T</span><span style="--c:#ff8c1a">E</span><span style="--c:#ffd500">T</span><span style="--c:#39e75f">R</span><span style="--c:#00e5ff">I</span><span style="--c:#b04dff">S</span>
+    </h1>
+    <div class="subtitle">W O R L D S</div>
+    <div class="menu">
+      <button class="mode-btn" data-mode="marathon">
+        <span class="t">Marathon</span><span class="d">Endlos · Level steigt alle 10 Lines</span>
+      </button>
+      <div class="level-select">
+        <span>Start-Level</span>
+        <button id="lvl-down" aria-label="Level runter">‹</button>
+        <span id="start-level">1</span>
+        <button id="lvl-up" aria-label="Level hoch">›</button>
+      </div>
+      <button class="mode-btn" data-mode="sprint">
+        <span class="t">Sprint</span><span class="d">40 Lines so schnell wie möglich</span>
+      </button>
+      <button class="mode-btn" data-mode="ultra">
+        <span class="t">Ultra</span><span class="d">Maximale Punkte in 2 Minuten</span>
+      </button>
+      <div class="row">
+        <button class="small-btn" data-open="scores">Highscores</button>
+        <button class="small-btn" data-open="medals">Medaillen</button>
+        <button class="small-btn" data-open="settings">Einstellungen</button>
+        <button class="small-btn" data-open="controls">Steuerung</button>
+      </div>
+    </div>
+    <div class="press-hint">Pfeiltasten + Enter oder Gamepad</div>
+    <div class="credit title-credit">made by <b>Omid</b></div>
+  </section>
+
+  <!-- Pause -->
+  <section class="screen" id="screen-pause">
+    <h2>PAUSE</h2>
+    <div class="menu">
+      <button class="big-btn" id="btn-resume">Weiter</button>
+      <button class="big-btn" id="btn-restart">Neustart</button>
+      <button class="big-btn" data-open="settings">Einstellungen</button>
+      <button class="big-btn" id="btn-quit">Hauptmenü</button>
+    </div>
+  </section>
+
+  <!-- Results -->
+  <section class="screen" id="screen-results">
+    <h2 id="result-title">GAME OVER</h2>
+    <div id="result-badge" class="badge hidden">NEUER REKORD!</div>
+    <div id="unlock-badge" class="badge hidden">OG SKIN FREIGESCHALTET! <small>→ Einstellungen</small></div>
+    <div class="result-grid" id="result-grid"></div>
+    <div id="result-medals" class="result-medals"></div>
+    <form id="save-form" class="save-form">
+      <input id="player-name" maxlength="12" placeholder="Dein Name" autocomplete="off" spellcheck="false">
+      <button type="submit" class="small-btn primary">Speichern</button>
+    </form>
+    <div id="result-board" class="leaderboard"></div>
+    <div class="row">
+      <button class="big-btn" id="btn-retry">Nochmal <kbd>R</kbd></button>
+      <button class="big-btn" id="btn-menu">Menü</button>
+    </div>
+  </section>
+
+  <!-- Highscores -->
+  <section class="screen" id="screen-scores">
+    <h2>HIGHSCORES</h2>
+    <div class="tabs">
+      <button data-tab="marathon" class="active">Marathon</button>
+      <button data-tab="sprint">Sprint</button>
+      <button data-tab="ultra">Ultra</button>
+    </div>
+    <div id="scores-board" class="leaderboard"></div>
+    <button class="big-btn back-btn">Zurück</button>
+  </section>
+
+  <!-- Medals -->
+  <section class="screen" id="screen-medals">
+    <h2>MEDAILLEN</h2>
+    <div id="medal-summary" class="medal-summary"></div>
+    <div id="medal-grid" class="medal-grid"></div>
+    <button class="big-btn back-btn">Zurück</button>
+  </section>
+
+  <!-- Settings -->
+  <section class="screen" id="screen-settings">
+    <h2>EINSTELLUNGEN</h2>
+    <div class="settings">
+      <div class="settings-col">
+        <h3>Handling</h3>
+        <label class="slider sens"><span>Sensitivität <em id="sens-desc"></em></span>
+          <input type="range" id="set-sens" min="1" max="10" step="1"><output></output></label>
+        <label class="slider"><span>DAS <em>Verzögerung bis Auto-Repeat</em></span>
+          <input type="range" id="set-das" min="40" max="300" step="1"><output></output></label>
+        <label class="slider"><span>ARR <em>Auto-Repeat-Rate (0 = sofort)</em></span>
+          <input type="range" id="set-arr" min="0" max="80" step="1"><output></output></label>
+        <label class="slider"><span>Soft Drop <em>Faktor (max = sofort)</em></span>
+          <input type="range" id="set-sdf" min="5" max="41" step="1"><output></output></label>
+        <label class="toggle"><input type="checkbox" id="set-dasCut"><span>DAS-Schutz <em>neues Teil rutscht nicht sofort mit</em></span></label>
+        <label class="toggle"><input type="checkbox" id="set-rumble"><span>Vibration <em>Gamepad</em></span></label>
+        <h3>Audio</h3>
+        <label class="slider"><span>Musik</span>
+          <input type="range" id="set-music" min="0" max="100" step="1"><output></output></label>
+        <label class="slider"><span>Effekte</span>
+          <input type="range" id="set-sfx" min="0" max="100" step="1"><output></output></label>
+        <h3>Anzeige</h3>
+        <label class="toggle"><input type="checkbox" id="set-ghost"><span>Ghost Piece</span></label>
+        <label class="toggle"><input type="checkbox" id="set-grid"><span>Raster</span></label>
+        <label class="toggle"><input type="checkbox" id="set-shake"><span>Screen Shake</span></label>
+        <label class="toggle"><input type="checkbox" id="set-particles"><span>Partikel</span></label>
+        <label class="toggle og-toggle" id="og-toggle"><input type="checkbox" id="set-og"><span>OG Skin <em id="og-hint"></em></span></label>
+      </div>
+      <div class="settings-col">
+        <h3>Tastenbelegung <em>(klicken zum Ändern)</em></h3>
+        <div id="keybinds"></div>
+        <button class="small-btn" id="reset-keys">Standard wiederherstellen</button>
+      </div>
+    </div>
+    <button class="big-btn back-btn">Zurück</button>
+  </section>
+
+  <!-- Controls -->
+  <section class="screen" id="screen-controls">
+    <h2>STEUERUNG</h2>
+    <div class="controls-grid">
+      <div>
+        <h3>Tastatur</h3>
+        <table id="controls-keys"></table>
+      </div>
+      <div>
+        <h3>Gamepad</h3>
+        <table>
+          <tr><td>Steuerkreuz / Stick</td><td>Bewegen · ↓ Soft Drop · ↑ Hard Drop</td></tr>
+          <tr><td>A</td><td>Rechts drehen</td></tr>
+          <tr><td>B</td><td>Links drehen</td></tr>
+          <tr><td>X</td><td>180° drehen</td></tr>
+          <tr><td>Y / L / R</td><td>Hold</td></tr>
+          <tr><td>Start</td><td>Pause</td></tr>
+        </table>
+        <h3>Tipps</h3>
+        <ul class="tips">
+          <li><b>T-Spins</b> geben enorme Punkte – dreh das T in eine Lücke.</li>
+          <li><b>Back-to-Back</b>: Tetris/T-Spin hintereinander = ×1.5.</li>
+          <li><b>Combos</b>: Lines in Folge räumen, der Sound steigt mit!</li>
+          <li>Das Stück <b>leuchtet auf</b>, kurz bevor es einrastet.</li>
+          <li>Drehen/Hold während einer Line-Clear-Animation wird <b>gepuffert</b>.</li>
+        </ul>
+      </div>
+    </div>
+    <button class="big-btn back-btn">Zurück</button>
+  </section>
+</div>
+
+<script src="js/game.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
