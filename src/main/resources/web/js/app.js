@@ -31,7 +31,7 @@ const DEFAULT_KEYS = {
 const SETTINGS_VERSION = 2;
 const DEFAULT_SETTINGS = {
   das: 160, arr: 33, sdf: 20, music: 50, sfx: 70,
-  ghost: true, grid: true, shake: true, particles: true, og: false,
+  ghost: true, grid: true, shake: true, particles: true, og: false, ogPalette: 'dmg',
   dasCut: true, rumble: true,
   keys: DEFAULT_KEYS,
 };
@@ -78,7 +78,15 @@ const WORLDS = [
 
 // ---------------------------------------------------------------- OG skin (Game Boy)
 const OG_UNLOCK_SCORE = 100000;
-const GB = ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'];
+// four-shade palettes, lightest first; the OG skin is drawn with exactly one of them
+const GB_PALETTES = {
+  dmg: { name: 'DMG', sub: 'Grün, 1989', unlock: OG_UNLOCK_SCORE, colors: ['#9bbc0f', '#8bac0f', '#306230', '#0f380f'] },
+  pocket: { name: 'Pocket', sub: 'Graugrün', unlock: 150000, colors: ['#c4cfa1', '#8b956d', '#4d533c', '#1f1f1f'] },
+  classic: { name: 'Klassik', sub: 'Beige', unlock: 150000, colors: ['#e0dbc4', '#a9a58b', '#6b6856', '#2a2a24'] },
+  light: { name: 'Light', sub: 'Türkis', unlock: 200000, colors: ['#00b581', '#009a71', '#00694a', '#004f3b'] },
+  super: { name: 'Super', sub: 'Sepia', unlock: 200000, colors: ['#f7e7c6', '#d68e49', '#a63725', '#331e50'] },
+};
+let GB = GB_PALETTES.dmg.colors;
 // 8×8 pixel patterns per piece, indices into GB (0 = lightest)
 const GB_PATTERNS = {
   I: ['33333333', '30000003', '31111113', '32222223', '32222223', '31111113', '30000003', '33333333'],
@@ -110,12 +118,20 @@ const pieceColor = type => settings.og ? GB[3] : COLORS[type];
 function bestScore() {
   return Math.max(0, ...['marathon', 'ultra', 'sprint'].map(m => (store.get(pbKey(m), null) || {}).score || 0));
 }
-function ogUnlocked() {
-  return store.get('ogUnlocked', false) || bestScore() > OG_UNLOCK_SCORE;
+const paletteKey = id => id === 'dmg' ? 'ogUnlocked' : 'ogUnlocked.' + id;
+function paletteUnlocked(id) {
+  return store.get(paletteKey(id), false) || bestScore() > GB_PALETTES[id].unlock;
 }
+const ogUnlocked = () => paletteUnlocked('dmg');
 function applySkin() {
   if (settings.og && !ogUnlocked()) settings.og = false;
+  if (!GB_PALETTES[settings.ogPalette] || !paletteUnlocked(settings.ogPalette)) settings.ogPalette = 'dmg';
+  GB = GB_PALETTES[settings.ogPalette].colors;
   document.documentElement.classList.toggle('og', settings.og);
+  GB.forEach((c, i) => {
+    if (settings.og) document.documentElement.style.setProperty('--gb' + i, c);
+    else document.documentElement.style.removeProperty('--gb' + i);
+  });
   sound.setRetro(settings.og);
   applyAccent();
   resize();
@@ -439,7 +455,7 @@ function drawBoard() {
   bctx.clearRect(0, 0, W, H);
 
   if (settings.grid) {
-    bctx.strokeStyle = settings.og ? 'rgba(15,56,15,0.12)' : 'rgba(255,255,255,0.05)';
+    bctx.strokeStyle = settings.og ? rgba(GB[3], 0.12) : 'rgba(255,255,255,0.05)';
     bctx.lineWidth = 1;
     bctx.beginPath();
     for (let x = 1; x < COLS; x++) { bctx.moveTo(x * CELL + 0.5, top); bctx.lineTo(x * CELL + 0.5, H); }
@@ -1030,15 +1046,22 @@ function showResults() {
 
   const pb = store.get(pbKey(g.mode), null);
   let isPb = false;
+  const unlockedBefore = Object.keys(GB_PALETTES).filter(paletteUnlocked);
   if (canSave) {
     isPb = !pb || (g.mode === 'sprint' ? lastResult.timeMs < pb.timeMs : lastResult.score > pb.score);
     if (isPb && (g.mode === 'sprint' || g.score > 0)) store.set(pbKey(g.mode), lastResult);
     else isPb = false;
   }
   $('#result-badge').classList.toggle('hidden', !isPb);
-  const newlyUnlocked = canSave && g.score > OG_UNLOCK_SCORE && !store.get('ogUnlocked', false);
-  if (canSave && g.score > OG_UNLOCK_SCORE) store.set('ogUnlocked', true);
-  $('#unlock-badge').classList.toggle('hidden', !newlyUnlocked);
+  const reached = canSave ? Object.keys(GB_PALETTES).filter(id => g.score > GB_PALETTES[id].unlock) : [];
+  for (const id of reached) store.set(paletteKey(id), true);
+  const newlyUnlocked = reached.filter(id => !unlockedBefore.includes(id));
+  if (newlyUnlocked.length) {
+    $('#unlock-text').textContent = newlyUnlocked.includes('dmg')
+      ? 'OG SKIN FREIGESCHALTET!'
+      : `NEUE OG-VARIANTE${newlyUnlocked.length > 1 ? 'N' : ''}: ${newlyUnlocked.map(id => GB_PALETTES[id].name.toUpperCase()).join(' & ')}!`;
+  }
+  $('#unlock-badge').classList.toggle('hidden', !newlyUnlocked.length);
 
   const mainVal = g.mode === 'sprint'
     ? (g.won ? fmtTime(g.time) : `${g.lines}/40 Lines`)
@@ -1241,6 +1264,7 @@ function loadSettingsUI() {
   $('#set-og').disabled = !unlocked;
   $('#og-toggle').classList.toggle('locked', !unlocked);
   $('#og-hint').textContent = unlocked ? 'Game Boy, 1989' : `Gesperrt – Highscore über ${fmtNum(OG_UNLOCK_SCORE)} nötig (Rekord: ${fmtNum(bestScore())})`;
+  renderPalettes(unlocked);
   renderKeybinds();
 }
 for (const key of Object.keys(sliderFmt)) {
@@ -1265,6 +1289,30 @@ $('#set-og').addEventListener('change', ev => {
   applySkin();
   sound.play('menuSelect');
 });
+
+function renderPalettes(unlocked) {
+  const el = $('#og-palettes');
+  el.classList.toggle('hidden', !unlocked);
+  el.innerHTML = '';
+  for (const [id, p] of Object.entries(GB_PALETTES)) {
+    const b = document.createElement('button');
+    const open = paletteUnlocked(id);
+    b.className = 'palette-btn' + (settings.ogPalette === id ? ' active' : '') + (open ? '' : ' locked');
+    b.disabled = !open;
+    b.title = open ? `${p.name} – ${p.sub}` : `Gesperrt – Highscore über ${fmtNum(p.unlock)} nötig`;
+    b.innerHTML = `<span class="swatch">${p.colors.map(c => `<i style="background:${c}"></i>`).join('')}</span>`
+      + `<span>${open ? p.name : '🔒 ' + fmtNum(p.unlock / 1000) + 'k'}</span>`;
+    b.addEventListener('click', () => {
+      settings.ogPalette = id;
+      settings.og = true;
+      saveSettings();
+      applySkin();
+      loadSettingsUI();
+      sound.play('menuSelect');
+    });
+    el.appendChild(b);
+  }
+}
 
 let listeningFor = null;
 function renderKeybinds() {

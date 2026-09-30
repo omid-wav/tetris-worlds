@@ -109,7 +109,7 @@
   <section class="screen" id="screen-results">
     <h2 id="result-title">GAME OVER</h2>
     <div id="result-badge" class="badge hidden">NEUER REKORD!</div>
-    <div id="unlock-badge" class="badge hidden">OG SKIN FREIGESCHALTET! <small>→ Einstellungen</small></div>
+    <div id="unlock-badge" class="badge hidden"><span id="unlock-text">OG SKIN FREIGESCHALTET!</span> <small>→ Einstellungen</small></div>
     <div class="result-grid" id="result-grid"></div>
     <div id="result-medals" class="result-medals"></div>
     <form id="save-form" class="save-form">
@@ -170,6 +170,7 @@
         <label class="toggle"><input type="checkbox" id="set-shake"><span>Screen Shake</span></label>
         <label class="toggle"><input type="checkbox" id="set-particles"><span>Partikel</span></label>
         <label class="toggle og-toggle" id="og-toggle"><input type="checkbox" id="set-og"><span>OG Skin <em id="og-hint"></em></span></label>
+        <div class="og-palettes hidden" id="og-palettes"></div>
       </div>
       <div class="settings-col">
         <h3>Tastenbelegung <em>(klicken zum Ändern)</em></h3>

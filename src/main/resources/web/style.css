@@ -464,6 +464,20 @@ input[type=range] { accent-color: var(--accent); width: 100%; }
 .og-toggle.locked { opacity: 0.55; cursor: not-allowed; }
 .og-toggle.locked input { cursor: not-allowed; }
 #unlock-badge small { font-size: 0.7em; }
+.og-palettes { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px 28px; }
+.palette-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 8px;
+  background: var(--panel); border: 2px solid var(--panel-border); color: var(--text);
+  font: inherit; font-size: 11px; cursor: pointer; border-radius: 6px;
+}
+.palette-btn:hover, .palette-btn:focus-visible { border-color: var(--accent); outline: none; }
+.palette-btn.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 20%, var(--panel)); }
+.palette-btn.locked { opacity: 0.5; cursor: not-allowed; }
+.palette-btn.locked .swatch { filter: grayscale(1); }
+.palette-btn .swatch { display: flex; border: 1px solid rgba(0,0,0,0.5); }
+.palette-btn .swatch i { display: block; width: 10px; height: 14px; }
+html.og .palette-btn { font-family: 'Press Start 2P', monospace; font-size: 7px; background: var(--gb0); border-color: var(--gb2); color: var(--gb3); }
+html.og .palette-btn.active { border-color: var(--gb3); background: var(--gb1); }
 
 /* ---------- OG skin: Game Boy (DMG-01) look ----------
    Four shades of green only, pixel font, hard edges, no glow, blur or smooth motion. */
